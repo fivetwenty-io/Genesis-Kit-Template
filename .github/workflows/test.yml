@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main, "feature/**"]
+  pull_request:
+    branches: [develop]
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type'
+        required: false
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: 'patch'
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.build-test.outputs.version }}
+      previous_version: ${{ steps.build-test.outputs.previous_version }}
+      has_breaking_changes: ${{ steps.build-test.outputs.has_breaking_changes }}
+      is_release_commit: ${{ steps.build-test.outputs.is_release_commit }}
+      release_version: ${{ steps.build-test.outputs.release_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Build, Test & Check Specs
+        id: build-test
+        uses: genesis-community/genesis-kit-build-test-spec-action@v1
+        with:
+          kit_name: your-kit-name
+          version_bump: ${{ github.event.inputs.version_bump || 'patch' }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Additional configuration
+          
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kit-build
+          path: build/*.tar.gz
+          
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spec-diffs
+          path: spec-check/*
+          
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes/*
